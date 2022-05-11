@@ -1,0 +1,339 @@
+# 15 Dec 2020 09:07
+
+About org-latex-compile-with-template
+
+* Purpose: Simplify the customization of Latex export from Org mode
+
+The function =org-latex-compile-with-template= implements an alternative way to turn an org-mode buffer or subtree into latex and compile it into pdf.  It is part of a collection of functions, which provide utilities for customizing the header and footer parts of the latex file, in order to produce output in different styles and with different options. 
+* Pdflatex vs. xelatex
+=org-latex-compile-with-template= provides choices for compiling with =pdflatex= and =xelatex=.  =XeLaTex= is more suitable for compiling buffers that use custom fonts (not part of the Tex, but installed on your current computer), and for texts written in multiple languages (especially non-latin-character-set languages, such as Greek, Chinese, Japanese, Korean, etc.), using UTF-8. The present packages provides provides keybindings for choosing whether to use =pdflatex= or =xelatex=.
+
+* hydra keyboard menu interface
+These functions can be called from a menu provided by a =hydra=.  The hydra (=hydra-latex/body=) is bound to the keyboard shortcut =Control-Meta-Shift-l=. The key bindings are: 
+
+** "x" org-xelatex-compile-buffer "ORG xelatex buffer
+
+Compile entire buffer using xelatex.  Xelatex 
+
+** "X" org-xelatex-compile-subtree "ORG xelatex subtree
+** "l" pdflatex-compile-buffer "TEX pdflatex buffer
+** "L" xelatex-compile-buffer "TEX xelatex buffer
+** "p" org-pdflatex-compile-buffer "ORG pdflatex buffer
+** "P" org-pdflatex-compile-subtree "ORG pdflatex subtree
+** "t" org-latex-set-buffer-template-interactively "set buffer template
+** "T" org-latex-set-subtree-template-interactively "set subtree template
+** "/" org-latex-post-file-template-path "post file template path
+** "?" org-latex-post-subtree-template-path "post subtree template path
+** "f" org-latex-find-file-template-file "find file template file
+** "F" org-latex-find-subtree-template-file "find subtree template file
+** "K" kill-latex-process-buffer "kill latex process buffer" :exit 
+** "q" quit "exit hydra"
+
+* How it Works: Main function and what it does
+
+The main function for compiling, =org-latex-compile-with-template=  provides an alternative way to export the current buffer or subtree as latex. This function gets the header and footer for the latex file from a template file written in =LaTeX=. It does not use any header from org-mode options.  By using a template file instead of writing the org-mode options in emacs-lisp makes it easier to edit and try out headers.
+
+* Key files and folders
+
+** Overview / Introduction 
+
+The directories used are: 
+- Directory used to compile the pdf file :: =compile_framework=
+- Directory containing template directories for compiling the pdf :: =templates=
+- Export directory :: =exports=
+
+The directories above are put together in one directory, called =latex-exports=. 
+
+** top directory: =latex-exports=, custom variable: =-org-latex-export-path=
+
+Custom variable =org-latex-export-path= holds the path of the directory which contains directories =compile= (templates and help files for compiling from latex to pdf), and =exports= (the pdf files exported by this system.). Its default value is: =~/latex-exports=.
+
+** compilation subdirectory =compile_framework=
+
+This contains the files actually used to actually compile the pdf.  
+
+Initially, we will test this as a regular directory.  At a second stage, we will test if it can also work as *symbolic link* to a directory located inside =templates=.
+
+*** Minimal framework directory configuration
+
+ A minimal =compile_framework= directory contains just 2 files: 
+
+ 1. =framework.tex= : This is a framework tex file, which encloses the main body of the document in a =\begin{document}= and =\end{document}= statement, and also provides any package, document definition and overall configuration statements needeed to compile the document to pdf.  It also contains an =\import{file}= directive, in order to import the main body of the document which is exported from org-mode.  
+  
+ 2. =body.tex= : This file contains the latex code produced by org-mode export, which is the main body of the contents of the document.  The file is produced each time before compiling the document to pdf. 
+
+*** Additional files in =compile_framework= and customization through latex fragments
+
+The =compile_framework= directory may also contain additional files needed for the compilation, such as latex style files, bibliography files, images and additional latex fragments for import, such as headers or footers, bibliography or front page definition files.  The latex fragments enable one to re-use the main framework file =framework.tex= and the style definitions previously tested in other documents, and to provide customized front page, header, footer or other information, which are not produced by exporting the org-mode text as body only.
+
+To customize a given template, one manually copies the template into a new folder, and then makes the necessary modifications in the files of the copied folder.
+ 
+** =templates= subdirectory
+
+The =templates= subdirectory 
+
+** exports directory =exports=
+
+is used 
+
+* What the user needs to (or can) specify
+
+** 1. The path of the =latex-exports= based directory.
+This is a custom variable with default value =~/latex-exports=
+The user can customize this value through the default methods available in emacs for custom variables.
+
+** 2. The path of the template to be used for exporting
+
+This is merely the name of a subdirectory under =latex-exports/templates=.
+It is specified on a file basis or subtree basis.  Its default value is =default_template=. 
+
+* Older notes
+
+** =org-latex-default-template-path=
+
+
+#+begin_src emacs-lisp
+(defun org-latex-default-template-path ()
+  "Calculate full path of file to default template framework file.
+  Concatenate org-latex-export-path with default path.
+  Issue error if latex-export folder has not been installed."
+  (let ((template-path (concat org-latex-export-path
+                               "/templates/000BASIC/history/framework.tex")))
+    (if (file-exists-p template-path)
+        template-path
+      (error "You must install latex-templates in your home folder to use this."))))
+
+(org-latex-default-template-path)
+#+end_src
+
+#+RESULTS:
+: /home/iani/latex-exports/templates/000BASIC/history/framework.tex
+
+** exports folder
+
+** template framework file
+
+** 
+
+* Export steps (for function =org-latex-compile-with-template=)
+
+**  Step 1: Convert org-mode to latex
+   
+This is done in function =org-latex-compile-with-template= by the following function call:
+
+#+begin_src elisp
+(org-export-as
+;; backend subtreep visible-only body-only ext-plist
+     'latex   subtreep   nil       t         nil)
+#+end_src
+
+The arguments provided to =org-export-as= work as follows:
+
+- ='latex= signals to output as latex
+- If =subtreep= is non-nil (=t=), then export only the current subtree.  Else if it is nil, then export the entire buffer.
+- =visible-only= is set to =nil=, and signals to export the entire contents of the subtree or buffer.  (Parts hidden by the user are also exported).
+- body-only set to =t=: Export only the org-mode text contents. Do not include header or footer option settings.
+- ext-plist set to =nil=: No other customization properties are provided.
+
+** Step 2: save latex to file
+
+Step 1 converts the selected part of the org-mode buffer to latex. The resulting latex code is saved to file =body.tex= inside the templates directory.  This directory is obtained by function like this:
+
+#+begin_src elisp
+  (let*
+      ((template-path (if subtreep
+                          (org-latex-get-subtree-template-path)
+                        (org-latex-get-file-template-path)))
+       (template-directory (file-name-directory template-path))
+     ;;; ...
+       (body-path (concat template-directory "body.tex"))))
+#+end_src
+ =org-latex-
+
+*** test: 
+
+#+begin_src emacs-lisp
+(org-latex-get-subtree-template-path)
+#+end_src
+
+#+RESULTS:
+: /home/iani/latex-exports/templates/000BASIC/history/framework.tex
+
+** Step 3: get framework file
+*** 3.1 Get path of framework file (called =template-path=)
+
+The latex template file is a file that contains a framework consisting of a header with the document type and various other settings such as fonts, geometry, packages etc. and a footer (optionally responsible for bibliography or other document parts that are generated by latex at the end of the document). We need to know which framework will be used for exporting the buffer or subtree selected by the user. 
+
+Get path from global property if exporting entire buffer or subtree property if exporting subtree.  The code for this is: 
+
+#+begin_src emacs-lisp
+(if subtreep
+                          (org-latex-get-subtree-template-path)
+                        (org-latex-get-file-template-path))
+#+end_src
+
+The default value is:
+
+="/home/iani/latex-exports/templates/000BASIC/history/framework.tex"=
+
+This file will be copied into the folder where the body of the latex file is to be exported, so that the framework will include the body in order to compile all the desired contents into pdf according to the specifications of the framework.
+
+Example 1: Getting the default framework path (no framework was specified by the user in the buffer).  In this case, both the subtree and file template path point to the same path, as shown here:
+ 
+**** subtree template path
+
+#+begin_src emacs-lisp
+(org-latex-get-subtree-template-path)
+#+end_src
+
+#+RESULTS:
+: /home/iani/latex-exports/templates/000BASIC/history/framework.tex
+
+
+#+begin_src emacs-lisp
+
+#+end_src
+
+**** file template path
+
+#+begin_src emacs-lisp
+(org-latex-get-file-template-path)
+#+end_src
+
+#+RESULTS:
+: /home/iani/latex-exports/templates/000BASIC/framework.tex
+
+Example 2: Setting a custom framework for a subtree:
+
+**** subtree with custom framework
+     :PROPERTIES:
+     :DATE:     <2020-12-19 Sat 15:30>
+     :LATEX_HEADER_PATH: /home/iani/latex-exports/templates/000BASIC/history/00verysimple201210_201214.tex
+     :END:
+
+The custom framework path for this subtree was set interactively with function =org-latex-set-subtree-template-interactively=.  After that, the template path was tested like this:
+
+#+begin_src emacs-lisp
+(org-latex-get-subtree-template-path)
+#+end_src
+
+#+RESULTS:
+: /home/iani/latex-exports/templates/000BASIC/history/00verysimple201210_201214.tex
+
+*** Copy framework file to =<templatefolder>/framework.tex=
+
+In order to use the selected framework for compiling into pdf, it is necessary to copy that framework into the same folder where the =body.tex= file is to be exported, so that the framework file finds the body file.  Therefore, before compiling to pdf, one must do this: 
+
+Copy the selected framework template file into =(concat template-directory "framework.tex")=. Like this:
+
+#+begin_src emacs-lisp
+(copy-file template-path (concat template-directory "framework.tex") t)
+#+end_src
+
+The default action is to copy the file from:
+="/home/iani/latex-exports/templates/000BASIC/history/framework.tex"=
+to:
+="/home/iani/latex-exports/templates/000BASIC/framework.tex"=
+
+** Step 4: Compile framework + exported body
+
+** Step 5: Copy framework as backup
+
+Copy =<templatefolder>/framework.tex= to =<templatefolder>/history/<exportname>.tex= 
+
+<exportname> is 
+
+** Step 6: Save link to framework backup in org-mode buffer
+
+This is important so that when recompiling the buffer or subtree, the same framework is used.  In this way, corrections to the org-mode can be made at any time later on, and re-exported to pdf while keeping the same latex options defined in the framework.
+
+
+
+* Variables
+
+** =org-latex-export-path=
+
+The variable =org-latex-export-path= 
+
+** =org-latex-bib-folder=
+
+** =org-latex-bib-filename=
+
+* Functions
+** =org-latex-bib-full-path=
+
+
+** =org-latex-default-template-path=
+
+
+
+** =org-latex-body-path=
+
+** =org-pdflatex-compile-buffer=
+
+** =org-xelatex-compile-buffer=
+
+** =org-latex-compile-with-template=
+
+** =xelatex-compile-buffer=
+
+** =pdflatex-compile-buffer=
+
+** =latex-compile-file-with-latexmk=
+
+** =org-latex-post-file-template-path=
+
+** =org-latex-get-file-template-path=
+   :PROPERTIES:
+   :DATE:     <2020-12-19 Sat 13:57>
+   :END:
+
+
+** =org-latex-get-subtree-template-path=
+   :PROPERTIES:
+   :DATE:     <2020-12-19 Sat 18:18>
+   :END:
+
+#+begin_quote
+"Get latex template file path from LATEX_HEADER_PATH property of current subtree."
+#+end_quote
+
+This is computed like this: 
+
+#+begin_src emacs-lisp
+(concat org-latex-export-path
+                               "/templates/000BASIC/history/framework.tex")
+#+end_src
+
+#+RESULTS:
+: /home/iani/latex-exports/templates/000BASIC/history/framework.tex
+
+Above is the default value.
+
+** =org-latex-set-subtree-template-interactively=
+
+** =org-latex-set-subtree-template=
+
+** =org-latex-read-template-path=
+
+** =org-latex-set-buffer-template-interactively=
+
+** =org-latex-set-buffer-template=
+
+** =org-latex-set-buffer-export-name=
+
+** =org-latex-set-subtree-export-name=
+
+** =org-set-subtree-or-buffer-property=
+
+** =org-get-custom-property=
+
+** =org-latex-find-file-template-file=
+
+** =org-latex-find-subtree-template-file=
+
+
+
+** =kill-latex-process-buffer=
+
+Interactive. Utility for killing the process buffer that displays the pdf preview (=epdfview=).  This closes the pdf preview window and and frees the buffer for then next preview.

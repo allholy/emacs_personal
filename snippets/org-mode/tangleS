@@ -1,0 +1,8 @@
+# -*- mode: snippet -*-
+# name: tangle source block
+# key: tangleS
+# --
+
+#+begin_src sclang :tangle "./out_file1.scd"
+
+#+end_src

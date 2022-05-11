@@ -1,0 +1,6 @@
+# -*- mode: snippet -*-
+# name: colorbgblock
+# key: clrhtml
+# --
+
+#+HTML_HEAD: <style>pre.src {background-color: #303030; color: #e5e5e5;}</style>
