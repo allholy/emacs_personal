@@ -14,7 +14,7 @@
 ;; Transparency
 ;;(set-frame-parameter (selected-frame) 'alpha '(<active> . <inactive>))
 ;;(set-frame-parameter (selected-frame) 'alpha <both>)
-(set-frame-parameter (selected-frame) 'alpha '(92. 50))
+(set-frame-parameter (selected-frame) 'alpha '(85. 60))
 (add-to-list 'default-frame-alist '(alpha . (94. 50)))
 
 

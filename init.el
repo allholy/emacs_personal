@@ -228,4 +228,7 @@ it marks the next ARG lines after the ones already marked."
 (load-theme 'dracula t)
 
 
+;; double a line right down of the current one
+(global-set-key "\C-c\C-d" "\C-a\C- \C-n\M-w\C-y")
+
 ;; init.el ends here
